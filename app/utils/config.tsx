@@ -5,7 +5,6 @@ import {
   BottomNavProps,
   FooterProps,
   MainNavWidgetProps,
-  MainNavItem as MainNavItemType,
 } from "@orderly.network/ui-scaffold";
 import { AppLogos } from "@orderly.network/react-app";
 import { OrderlyActiveIcon, OrderlyIcon } from "../components/icons/orderly";
@@ -30,21 +29,12 @@ import {
 } from "./runtime-config";
 import { Link } from "react-router-dom";
 import CustomLeftNav from "@/components/CustomLeftNav";
-import { CampaignsNavTitle } from "@/components/CampaignsNavTitle";
 
 interface MainNavItem {
   name: string;
   href: string;
   target?: string;
 }
-
-type MenuConfigItem = {
-  id: string;
-  href: string;
-  name: string;
-  target?: string;
-  isDefault?: boolean;
-} & Pick<MainNavItemType, "customRender">;
 
 interface ColorConfigInterface {
   upColor?: string;
@@ -68,6 +58,37 @@ export type OrderlyConfig = {
     sharePnLConfig: TradingPageProps["sharePnLConfig"];
   };
 };
+
+const ALL_MENU_ITEMS = [
+  { name: "Trading", href: "/", translationKey: "common.trading" },
+  { name: "Portfolio", href: "/portfolio", translationKey: "common.portfolio" },
+  { name: "Markets", href: "/markets", translationKey: "common.markets" },
+  { name: "Swap", href: "/swap", translationKey: "extend.swap" },
+  {
+    name: "Rewards",
+    href: "/rewards",
+    translationKey: "tradingRewards.rewards",
+  },
+  {
+    name: "Leaderboard",
+    href: "/leaderboard",
+    translationKey: "tradingLeaderboard.leaderboard",
+  },
+  { name: "Vaults", href: "/vaults", translationKey: "common.vaults" },
+  { name: "Points", href: "/points", translationKey: "tradingPoints.points" },
+];
+
+const DEFAULT_ENABLED_MENUS = [
+  { name: "Trading", href: "/", translationKey: "common.trading" },
+  { name: "Portfolio", href: "/portfolio", translationKey: "common.portfolio" },
+  { name: "Markets", href: "/markets", translationKey: "common.markets" },
+  { name: "Swap", href: "/swap", translationKey: "extend.swap" },
+  {
+    name: "Leaderboard",
+    href: "/leaderboard",
+    translationKey: "tradingLeaderboard.leaderboard",
+  },
+];
 
 const getCustomMenuItems = (): MainNavItem[] => {
   const customMenusEnv = getRuntimeConfig("VITE_CUSTOM_MENUS");
@@ -115,10 +136,7 @@ const getCustomMenuItems = (): MainNavItem[] => {
   }
 };
 
-const getEnabledMenus = (
-  allMenuItems: MenuConfigItem[],
-  defaultEnabledMenus: MenuConfigItem[]
-) => {
+const getEnabledMenus = () => {
   const enabledMenusEnv = getRuntimeConfig("VITE_ENABLED_MENUS");
 
   if (
@@ -126,7 +144,7 @@ const getEnabledMenus = (
     typeof enabledMenusEnv !== "string" ||
     enabledMenusEnv.trim() === ""
   ) {
-    return defaultEnabledMenus;
+    return DEFAULT_ENABLED_MENUS;
   }
 
   try {
@@ -136,16 +154,16 @@ const getEnabledMenus = (
 
     const enabledMenus = [];
     for (const menuName of enabledMenuNames) {
-      const menuItem = allMenuItems.find((item) => item.id === menuName);
+      const menuItem = ALL_MENU_ITEMS.find((item) => item.name === menuName);
       if (menuItem) {
         enabledMenus.push(menuItem);
       }
     }
 
-    return enabledMenus.length > 0 ? enabledMenus : defaultEnabledMenus;
+    return enabledMenus.length > 0 ? enabledMenus : DEFAULT_ENABLED_MENUS;
   } catch (e) {
     console.warn("Error parsing VITE_ENABLED_MENUS:", e);
-    return defaultEnabledMenus;
+    return DEFAULT_ENABLED_MENUS;
   }
 };
 
@@ -182,8 +200,8 @@ const getPnLBackgroundImages = (): string[] => {
   ];
 };
 
-const getBottomNavIcon = (menuId: string) => {
-  switch (menuId) {
+const getBottomNavIcon = (menuName: string) => {
+  switch (menuName) {
     case "Trading":
       return {
         activeIcon: <TradingActiveIcon />,
@@ -205,7 +223,7 @@ const getBottomNavIcon = (menuId: string) => {
         inactiveIcon: <MarketsInactiveIcon />,
       };
     default:
-      throw new Error(`Unsupported menu id: ${menuId}`);
+      throw new Error(`Unsupported menu name: ${menuName}`);
   }
 };
 
@@ -236,64 +254,15 @@ export const useOrderlyConfig = () => {
   const { isMobile } = useScreen();
 
   return useMemo<OrderlyConfig>(() => {
-    const allMenuItems: MenuConfigItem[] = [
-      { id: "Trading", href: "/", name: t("common.trading"), isDefault: true },
-      {
-        id: "Portfolio",
-        href: "/portfolio",
-        name: t("common.portfolio"),
-        isDefault: true,
-      },
-      {
-        id: "Markets",
-        href: "/markets",
-        name: t("common.markets"),
-        isDefault: true,
-      },
-      { id: "Swap", href: "/swap", name: t("extend.swap"), isDefault: true },
-      {
-        id: "Leaderboard",
-        href: "/leaderboard",
-        name: t("extend.tradingLeaderboard.leaderboard"),
-        isDefault: true,
-      },
-      {
-        id: "Campaigns",
-        href: "",
-        name: t("extend.tradingLeaderboard.campaigns"),
-        isDefault: true,
-        target: "_blank",
-        customRender: () => {
-          return (
-            <CampaignsNavTitle
-              title={t("extend.tradingLeaderboard.campaigns")}
-            />
-          );
-        },
-      },
-
-      { id: "Rewards", href: "/rewards", name: t("tradingRewards.rewards") },
-      { id: "Vaults", href: "/vaults", name: t("common.vaults") },
-      {
-        id: "Points",
-        href: "/points",
-        name: t("extend.tradingPoints.points"),
-      },
-    ];
-
-    const defaultEnabledMenus = allMenuItems.filter((menu) => menu.isDefault);
-
-    const enabledMenus = getEnabledMenus(allMenuItems, defaultEnabledMenus);
+    const enabledMenus = getEnabledMenus();
     const customMenus = getCustomMenuItems();
 
     const translatedEnabledMenus = enabledMenus.map((menu) => ({
-      name: menu.name,
+      name: t(menu.translationKey),
       href: menu.href,
-      target: menu.target,
-      customRender: menu.customRender,
     }));
 
-    const allMainMenus = [...translatedEnabledMenus, ...customMenus];
+    const allMenuItems = [...translatedEnabledMenus, ...customMenus];
 
     const supportedBottomNavMenus = [
       "Trading",
@@ -302,13 +271,12 @@ export const useOrderlyConfig = () => {
       "Leaderboard",
     ];
     const bottomNavMenus = enabledMenus
-      .filter((menu) => supportedBottomNavMenus.includes(menu.id))
+      .filter((menu) => supportedBottomNavMenus.includes(menu.name))
       .map((menu) => {
-        const icons = getBottomNavIcon(menu.id);
+        const icons = getBottomNavIcon(menu.name);
         return {
-          name: menu.name,
+          name: t(menu.translationKey),
           href: menu.href,
-          target: menu.target,
           ...icons,
         };
       })
@@ -316,7 +284,7 @@ export const useOrderlyConfig = () => {
 
     const mainNavProps: MainNavWidgetProps = {
       initialMenu: "/",
-      mainMenus: allMainMenus,
+      mainMenus: allMenuItems,
     };
 
     if (getRuntimeConfigBoolean("VITE_ENABLE_CAMPAIGNS")) {
